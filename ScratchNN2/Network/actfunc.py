@@ -4,4 +4,4 @@
 import numpy as np
 
 def act_sigmoid(input):
-	return 1/(1+np.exp(-input))
+	return 1/(1+np.exp(np.float128(-input)))

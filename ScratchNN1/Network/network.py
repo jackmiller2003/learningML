@@ -54,7 +54,7 @@ class Network:
 		hidden_outputs = self.act_func(hidden_inputs)
 
 		final_inputs = np.dot(self.who, hidden_outputs)
-		final_outputs = self.act_func(final_inputs)
+		final_outputs = self.act_func(final_inputs)	
 
 
 		output_errors = targets - final_outputs
