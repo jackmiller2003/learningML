@@ -106,6 +106,8 @@ class Network:
 		
 		inputs = np.array(input_list, ndmin=2).T
 
+		print(inputs)
+
 		hidden_inputs = np.dot(self.wih, inputs)
 		act_output = self.hlist[0][1](hidden_inputs)
 
@@ -136,10 +138,15 @@ class Network:
 
 n = Network([[784],
 [75, act_sigmoid],
-[50, act_sigmoid],
+[50 , act_sigmoid],
 [10, act_sigmoid]], 0.3)
 
-data = dp.proc_data('Data/MNISTData/mnist_train.csv', 'Data/MNISTData/mnist_test.csv', 10)
+data = dp.proc_data('Data/MNISTData/mnist_train_100.csv', 'Data/MNISTData/mnist_test_10.csv', 10)
+
+print(np.shape(data[0][0][0]))
+
+print(np.shape(n.hwlist[0]))
+print(n.hlist[0][0])
 
 epochs = 1
 
