@@ -12,14 +12,24 @@ def act_ReLU(input):
 	return(np.maximum(0, input))
 
 
-def back_sigmoid(dA, input):
+def back_sigmoid(input):
 	
-	return dA * act_sigmoid(input) * (1 - act_sigmoid(input))
+	output = []
 
-def back_ReLU(dA, input):
+	for row in input:
+		output.append(act_sigmoid(row) * (1 - act_sigmoid(row)))
 
-	dZ = np.array(dA, copy=True)
+	return np.squeeze(output, axis=1)
 
-	dZ[input <= 0] = 0
-	return dZ
+
+#Need to upadte...
+def back_ReLU(input):
+    input[input<=0] = 0
+    input[input>0] = 1
+
+    #print(input)
+    #print(weights)
+
+    return input
+
 
