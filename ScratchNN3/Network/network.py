@@ -10,6 +10,8 @@ import operator
 #Local application/library specific imports
 from actfunc import *
 from costfunc import *
+from Data import dataproc as dp
+sys.path.append(os.path.join(os.path.dirname(__file__), "Data"))
 
 class LayerDense:
 
@@ -58,7 +60,7 @@ class LayerDense:
 					"\n\tActivations: \n" + str(self.activations) + "\n"
 				)
 
-
+	#Rewrite
 	def forward(self, input_list):
 
 		inputs = np.array(input_list, ndmin=2).T
@@ -86,9 +88,12 @@ class LayerDense:
 			raise Exception("Iterated over a layer that doesn't exist")
 
 
+	#Rewrite
 	def update(self, lrate):
 
-		self.weights = self.weights + lrate*self.delta
+		self.weights = self.weights - lrate*self.delta
+
+		self.bias = self.bias - lrate*self.bias_delta
 
 class Network:
 
@@ -129,13 +134,15 @@ class Network:
 		return self.layers[-1].activations
 
 
-	#Do it by loops!
+	#Rewrite
 	def backward_prop(self, input_list, target_list):
 		
 		for layer in reversed(list(enumerate(self.layers))):
 
 			#Last layer weights
 			if layer[0] == len(list(enumerate(self.layers))) - 1:
+
+				bias_delta = []
 
 				delta = []
 				neuron = 0
@@ -152,15 +159,23 @@ class Network:
 						dz_dw = self.layers[layer[0] - 1].activations[weight[0]]
 						sub_delta.append(dc_da * da_dz * dz_dw)
 
+						#print(dc_da * da_dz * dz_dw)
+
 					delta.append(np.squeeze(sub_delta))
+
+					bias_delta.append(np.sum(np.squeeze(sub_delta)))
+
 					neuron += 1
 
 				layer[1].delta = np.squeeze(delta)
+
+				layer[1].bias_delta = np.squeeze(bias_delta)
 
 
 			#Hidden layer weights
 			elif layer[0] != 0:
 
+				bias_delta = []
 				delta = []
 				neuron = 0
 
@@ -169,7 +184,7 @@ class Network:
 					sub_delta = []
 					da_dz = layer[1].da_dz[neuron]
 
-					dc_da = np.sum(np.transpose(self.layers[layer[0] + 1].delta)[neuron])
+					dc_da = np.sum(np.transpose(self.layers[layer[0] + 1].delta)[neuron]) / len(np.transpose(self.layers[layer[0] + 1].delta))
 
 					for weight in list(enumerate(layer[1].weights[neuron])):
 
@@ -179,7 +194,11 @@ class Network:
 					delta.append(np.squeeze(sub_delta))
 					neuron += 1
 
+					bias_delta.append(np.sum(np.squeeze(sub_delta)))
+
 				layer[1].delta = np.squeeze(delta)
+
+				layer[1].bias_delta = np.squeeze(bias_delta)
 
 
 			else:
@@ -192,6 +211,8 @@ class Network:
 
 			for trdata in list(enumerate(train_data)):
 
+				print("Back prop", trdata[0])
+
 				prediction = self.forward(trdata[1][0])
 
 				target = np.matrix(trdata[1][1]).T
@@ -202,31 +223,41 @@ class Network:
 
 					if layer[0] != 0:
 
+						#print(layer[1].delta)
+
 						layer[1].update(lrate)
 
-			for tedata in list(enumerate(test_data)):
+			score = 0
 
-				print(self.forward(trdata[1][0]) - np.transpose(np.matrix(tedata[1][1])))
+			for image in test_data:
+
+				correct = max(enumerate(image[1]), key=operator.itemgetter(1))
+				query = max(enumerate(n.forward(image[0])), key=operator.itemgetter(1))
+
+				if correct[0] == query[0]:
+					#print("success")
+					score += 1
+				else:
+					#print("fail")
+					continue
+
+				
+			print(score/len(test_data))
 
 			
 n = Network([
-			{'layer_num': 1, 'category': 'Input', 'neurons': 3, 'activation_function': act_sigmoid},
-			{'layer_num': 2, 'category': 'Hidden', 'neurons': 5, 'activation_function': act_ReLU},
-			{'layer_num': 3, 'category': 'Hidden', 'neurons': 5, 'activation_function': act_sigmoid},
-			{'layer_num': 4, 'category': 'Hidden', 'neurons': 6, 'activation_function': act_sigmoid},
-			{'layer_num': 5, 'category': 'Output', 'neurons': 3, 'activation_function': act_sigmoid}
+			{'layer_num': 1, 'category': 'Input', 'neurons': 784, 'activation_function': act_sigmoid},
+			{'layer_num': 2, 'category': 'Hidden', 'neurons': 200, 'activation_function': act_sigmoid},
+			{'layer_num': 3, 'category': 'Hidden', 'neurons': 25, 'activation_function': act_sigmoid},
+			{'layer_num': 4, 'category': 'Output', 'neurons': 10, 'activation_function': act_sigmoid}
 			])
 
 #print(n.layers[2].bias)
 
-training = []
-
-training.append([[1, 2, 3], [0.1, 0.5, 0.2]])
-
-test = []
-
-test.append([[1, 2, 3], [0.1, 0.5, 0.2]])
-
-n.train(training, test, 0.1, 1)
 #print(n.layers[1].backward(n.layers[2].activations))
 
+data = dp.proc_data('Data/MNISTData/mnist_train.csv', 'Data/MNISTData/mnist_test.csv', 10)
+
+n.train(data[0][:1000], data[1][:100], 0.1, 1)
+
+#Code ain't working!
