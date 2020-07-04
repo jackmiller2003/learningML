@@ -60,7 +60,7 @@ class LayerDense:
 					"\n\tActivations: \n" + str(self.activations) + "\n"
 				)
 
-	#Rewrite
+
 	def forward(self, input_list):
 
 		inputs = np.array(input_list, ndmin=2).T
@@ -86,10 +86,6 @@ class LayerDense:
 			raise Exception("Iterated over a layer that doesn't exist")
 
 
-	#Rewrite
-	def update(self, lrate):
-
-		pass
 
 class Network:
 
@@ -117,8 +113,6 @@ class Network:
 
 		input_array = np.array(input_list, ndmin=2)
 
-		#print(input_array)
-
 		for layer in list(enumerate(self.layers)):
 			
 			if layer[0] == 0:
@@ -127,24 +121,13 @@ class Network:
 
 			else:
 
-				#print(layer[0] - 1)
-
-				#print(self.layers[layer[0] - 1].activations)
-
-				print(str(layer[0] - 1), layer[1].forward(self.layers[layer[0] - 1].activations))
-
 				layer[1].forward(self.layers[layer[0] - 1].activations)
 
 		return self.layers[-1].activations
 
 
-	#Rewrite
 	def backward_prop(self, input_list, target_list, lrate):
 
-		#print(type(input_list), input_list)
-
-		#print(type(target_list), target_list)
-		
 		prediction = self.forward(input_list)
 
 		dc_da = cost_dMSE(prediction, np.transpose(np.matrix(target_list)))
@@ -153,34 +136,20 @@ class Network:
 
 		self.layers[-1].loss = np.multiply(dc_da, dSigmaZ)
 
-		#print(self.layers[-1].output_loss)
-
 		for hlayer in reversed(list(enumerate(self.layers[1:3]))):
 
-			#print(hlayer[1])
-
 			dSigmaZ = hlayer[1].back_function(hlayer[1].z)
-
-			#print(self.layers[hlayer[0] + 2])
 
 			hlayer[1].loss = np.multiply(
 				(np.transpose(self.layers[hlayer[0] + 2].weights) * self.layers[hlayer[0] + 2].loss),
 				dSigmaZ
 				)
-			
-			#print(hlayer[1].loss)
 
 		for layer in list(enumerate(self.layers[1:])):
-			
-			#print(np.transpose(np.matrix(layer[1].bias)) - layer[1].loss)
-			
-			layer[1].bias = np.transpose(np.matrix(layer[1].bias)) - lrate*(layer[1].loss)
+					
+			layer[1].bias = np.transpose(np.transpose(np.matrix(layer[1].bias)) + lrate*(layer[1].loss))
 
-			#print(layer[1].weights)
-
-			#print(layer[1].weights - lrate*(np.dot(layer[1].loss, np.transpose(self.layers[layer[0]].activations))))
-
-			layer[1].weights = layer[1].weights - lrate*(np.dot(layer[1].loss, np.transpose(self.layers[layer[0]].activations)))
+			layer[1].weights = layer[1].weights + lrate*(np.dot(layer[1].loss, np.transpose(self.layers[layer[0]].activations)))
 
 
 	def train(self, train_data, test_data, lrate, epochs):
@@ -189,25 +158,16 @@ class Network:
 
 			for data in train_data:
 
-				print(data)
-
 				input_list = data[0]
-				output = data[1]
+				targ = data[1]
 
-				#print(type(input_list), input_list)
-				#print(type(output), output)
-
-				self.backward_prop(input_list, output, lrate)
-
-
+				self.backward_prop(input_list, targ, lrate)
+			
 			for data in test_data:
 
-				pass
+				print(np.sum(cost_MSE(self.forward(data[0]), data[1])))
+				print(self.forward(data[0]))
 
-			#self.forward(data[0])
-
-			#print(forward(data[1]))
-		
 		
 			
 n = Network([
@@ -217,20 +177,19 @@ n = Network([
 			{'layer_num': 4, 'category': 'Output', 'neurons': 5, 'activation_function': act_sigmoid}
 			])
 
-#print(n.layers[2].bias)
 
-#print(n.layers[1].backward(n.layers[2].activations))
-
-#n.backward_prop([0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ], 0.1)
-
-n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]]], 
+n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
+	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
 	[[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
-	0.1, 1)
-
-#n.forward([0.1, 0.1, 0.2, 0.3, 0.4])
-
-'''n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]]], 
-	[[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
-	0.1, 2)'''
-
-#Code ain't working!
+	0.1, 10)
