@@ -41,7 +41,7 @@ class LayerDense:
 				float(0), pow(neurons, -0.5), (neurons, prev_neurons)
 				)
 
-			self.bias = np.random.normal(float(0), pow(3, -0.5), neurons)
+			self.bias = np.random.normal(float(0), pow(3, -0.5), (neurons))
 
 
 	def __str__(self):
@@ -73,13 +73,11 @@ class LayerDense:
 
 		elif self.layer_num > 1:
 
-			weighted_inputs = np.dot(np.matrix(self.weights), np.matrix(inputs).T) + np.transpose(np.matrix(self.bias), axes=None)
+			z = np.dot(np.matrix(self.weights), np.matrix(inputs).T) + np.transpose(np.matrix(self.bias), axes=None)
 
-			self.weighted_inputs = weighted_inputs
+			self.z = z
 
-			self.activations = self.activation_function(weighted_inputs)
-
-			self.da_dz = self.back_function(self.weighted_inputs)
+			self.activations = self.activation_function(z)
 
 			return self.activations
 
@@ -91,9 +89,7 @@ class LayerDense:
 	#Rewrite
 	def update(self, lrate):
 
-		self.weights = self.weights - lrate*self.delta
-
-		self.bias = self.bias - lrate*self.bias_delta
+		pass
 
 class Network:
 
@@ -121,6 +117,8 @@ class Network:
 
 		input_array = np.array(input_list, ndmin=2)
 
+		#print(input_array)
+
 		for layer in list(enumerate(self.layers)):
 			
 			if layer[0] == 0:
@@ -129,135 +127,110 @@ class Network:
 
 			else:
 
+				#print(layer[0] - 1)
+
+				#print(self.layers[layer[0] - 1].activations)
+
+				print(str(layer[0] - 1), layer[1].forward(self.layers[layer[0] - 1].activations))
+
 				layer[1].forward(self.layers[layer[0] - 1].activations)
 
 		return self.layers[-1].activations
 
 
 	#Rewrite
-	def backward_prop(self, input_list, target_list):
+	def backward_prop(self, input_list, target_list, lrate):
+
+		#print(type(input_list), input_list)
+
+		#print(type(target_list), target_list)
 		
-		for layer in reversed(list(enumerate(self.layers))):
+		prediction = self.forward(input_list)
 
-			#Last layer weights
-			if layer[0] == len(list(enumerate(self.layers))) - 1:
+		dc_da = cost_dMSE(prediction, np.transpose(np.matrix(target_list)))
 
-				bias_delta = []
+		dSigmaZ = self.layers[-1].back_function(self.layers[-1].z)
 
-				delta = []
-				neuron = 0
+		self.layers[-1].loss = np.multiply(dc_da, dSigmaZ)
 
-				while neuron < layer[1].neurons:
+		#print(self.layers[-1].output_loss)
 
-					sub_delta = []
+		for hlayer in reversed(list(enumerate(self.layers[1:3]))):
 
-					dc_da = cost_dMSE(input_list[neuron], target_list[neuron])
-					da_dz = layer[1].da_dz[neuron]
+			#print(hlayer[1])
 
-					for weight in list(enumerate(layer[1].weights[neuron])):
+			dSigmaZ = hlayer[1].back_function(hlayer[1].z)
 
-						dz_dw = self.layers[layer[0] - 1].activations[weight[0]]
-						sub_delta.append(dc_da * da_dz * dz_dw)
+			#print(self.layers[hlayer[0] + 2])
 
-						#print(dc_da * da_dz * dz_dw)
+			hlayer[1].loss = np.multiply(
+				(np.transpose(self.layers[hlayer[0] + 2].weights) * self.layers[hlayer[0] + 2].loss),
+				dSigmaZ
+				)
+			
+			#print(hlayer[1].loss)
 
-					delta.append(np.squeeze(sub_delta))
+		for layer in list(enumerate(self.layers[1:])):
+			
+			#print(np.transpose(np.matrix(layer[1].bias)) - layer[1].loss)
+			
+			layer[1].bias = np.transpose(np.matrix(layer[1].bias)) - lrate*(layer[1].loss)
 
-					bias_delta.append(np.sum(np.squeeze(sub_delta)))
+			#print(layer[1].weights)
 
-					neuron += 1
+			#print(layer[1].weights - lrate*(np.dot(layer[1].loss, np.transpose(self.layers[layer[0]].activations))))
 
-				layer[1].delta = np.squeeze(delta)
-
-				layer[1].bias_delta = np.squeeze(bias_delta)
-
-
-			#Hidden layer weights
-			elif layer[0] != 0:
-
-				bias_delta = []
-				delta = []
-				neuron = 0
-
-				while neuron < layer[1].neurons:
-
-					sub_delta = []
-					da_dz = layer[1].da_dz[neuron]
-
-					dc_da = np.sum(np.transpose(self.layers[layer[0] + 1].delta)[neuron]) / len(np.transpose(self.layers[layer[0] + 1].delta))
-
-					for weight in list(enumerate(layer[1].weights[neuron])):
-
-						dz_dw = self.layers[layer[0] - 1].activations[weight[0]]
-						sub_delta.append(dc_da * da_dz * dz_dw)
-
-					delta.append(np.squeeze(sub_delta))
-					neuron += 1
-
-					bias_delta.append(np.sum(np.squeeze(sub_delta)))
-
-				layer[1].delta = np.squeeze(delta)
-
-				layer[1].bias_delta = np.squeeze(bias_delta)
-
-
-			else:
-				continue
+			layer[1].weights = layer[1].weights - lrate*(np.dot(layer[1].loss, np.transpose(self.layers[layer[0]].activations)))
 
 
 	def train(self, train_data, test_data, lrate, epochs):
 		
 		for epoch in range(epochs):
 
-			for trdata in list(enumerate(train_data)):
+			for data in train_data:
 
-				print("Back prop", trdata[0])
+				print(data)
 
-				prediction = self.forward(trdata[1][0])
+				input_list = data[0]
+				output = data[1]
 
-				target = np.matrix(trdata[1][1]).T
+				#print(type(input_list), input_list)
+				#print(type(output), output)
 
-				self.backward_prop(prediction, target)
+				self.backward_prop(input_list, output, lrate)
 
-				for layer in list(enumerate(self.layers)):
 
-					if layer[0] != 0:
+			for data in test_data:
 
-						#print(layer[1].delta)
+				pass
 
-						layer[1].update(lrate)
+			#self.forward(data[0])
 
-			score = 0
-
-			for image in test_data:
-
-				correct = max(enumerate(image[1]), key=operator.itemgetter(1))
-				query = max(enumerate(n.forward(image[0])), key=operator.itemgetter(1))
-
-				if correct[0] == query[0]:
-					#print("success")
-					score += 1
-				else:
-					#print("fail")
-					continue
-
-				
-			print(score/len(test_data))
-
+			#print(forward(data[1]))
+		
+		
 			
 n = Network([
-			{'layer_num': 1, 'category': 'Input', 'neurons': 784, 'activation_function': act_sigmoid},
-			{'layer_num': 2, 'category': 'Hidden', 'neurons': 200, 'activation_function': act_sigmoid},
-			{'layer_num': 3, 'category': 'Hidden', 'neurons': 25, 'activation_function': act_sigmoid},
-			{'layer_num': 4, 'category': 'Output', 'neurons': 10, 'activation_function': act_sigmoid}
+			{'layer_num': 1, 'category': 'Input', 'neurons': 5, 'activation_function': act_sigmoid},
+			{'layer_num': 2, 'category': 'Hidden', 'neurons': 3, 'activation_function': act_sigmoid},
+			{'layer_num': 3, 'category': 'Hidden', 'neurons': 3, 'activation_function': act_sigmoid},
+			{'layer_num': 4, 'category': 'Output', 'neurons': 5, 'activation_function': act_sigmoid}
 			])
 
 #print(n.layers[2].bias)
 
 #print(n.layers[1].backward(n.layers[2].activations))
 
-data = dp.proc_data('Data/MNISTData/mnist_train.csv', 'Data/MNISTData/mnist_test.csv', 10)
+#n.backward_prop([0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ], 0.1)
 
-n.train(data[0][:1000], data[1][:100], 0.1, 1)
+n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]]], 
+	[[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
+	0.1, 1)
+
+#n.forward([0.1, 0.1, 0.2, 0.3, 0.4])
+
+'''n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]]], 
+	[[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
+	0.1, 2)'''
 
 #Code ain't working!

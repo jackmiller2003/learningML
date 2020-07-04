@@ -26,8 +26,8 @@ def cost_crsentr(predictions, targets, epsilon=1e-12):
 
 def cost_MSE(predictions, targets):
 
-    return np.square(np.subtract(targets,predictions)).mean()
+    return np.square(np.subtract(targets,predictions))
 
 def cost_dMSE(predictions, targets):
 
-    return (2*(np.subtract(targets, predictions))).mean()
+    return (2*(np.subtract(targets, predictions)))
