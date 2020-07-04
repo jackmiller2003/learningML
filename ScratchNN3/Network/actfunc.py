@@ -11,6 +11,10 @@ def act_ReLU(input):
 	
 	return(np.maximum(0, input))
 
+def act_straight(input):
+
+	return input
+
 
 def back_sigmoid(input):
 	
@@ -31,5 +35,6 @@ def back_ReLU(input):
     #print(weights)
 
     return input
+
 
 

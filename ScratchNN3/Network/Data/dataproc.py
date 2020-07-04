@@ -10,7 +10,6 @@ import pprint as pp
 
 #Local application/library specific imports
 sys.path.append(os.path.join(os.path.dirname(__file__), "MNISTData"))
-sys.path
 
 def proc_data(train_data, test_data, onodes):
 
@@ -40,4 +39,8 @@ def proc_data(train_data, test_data, onodes):
 
 	return inp_tar(trdata_list), inp_tar(tedata_list)
 
-#result = proc_data('MNISTData/mnist_train_100.csv', 'MNISTData/mnist_test_10.csv', 10)
+print("yes")
+
+#result = proc_data('MNISTData/mnist_train.csv', 'MNISTData/mnist_test.csv', 10)
+
+

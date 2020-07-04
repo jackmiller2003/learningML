@@ -8,10 +8,10 @@ import pprint as pp
 import operator
 
 #Local application/library specific imports
+sys.path.append(os.path.join(os.path.dirname(__file__), "Data"))
 from actfunc import *
 from costfunc import *
 from Data import dataproc as dp
-sys.path.append(os.path.join(os.path.dirname(__file__), "Data"))
 
 class LayerDense:
 
@@ -28,6 +28,9 @@ class LayerDense:
 
 		elif self.activation_function == act_ReLU:
 			self.back_function = back_ReLU
+
+		elif self.activation_function == act_straight:
+			self.back_function = None
 
 		else:
 			raise Exception('No backward function was defined')
@@ -136,7 +139,7 @@ class Network:
 
 		self.layers[-1].loss = np.multiply(dc_da, dSigmaZ)
 
-		for hlayer in reversed(list(enumerate(self.layers[1:3]))):
+		for hlayer in reversed(list(enumerate(self.layers[1:-1]))):
 
 			dSigmaZ = hlayer[1].back_function(hlayer[1].z)
 
@@ -158,38 +161,46 @@ class Network:
 
 			for data in train_data:
 
+				#print(data[0])
+				#print(data[1])
+
 				input_list = data[0]
 				targ = data[1]
 
 				self.backward_prop(input_list, targ, lrate)
 			
-			for data in test_data:
-
-				print(np.sum(cost_MSE(self.forward(data[0]), data[1])))
-				print(self.forward(data[0]))
-
 		
 			
 n = Network([
-			{'layer_num': 1, 'category': 'Input', 'neurons': 5, 'activation_function': act_sigmoid},
-			{'layer_num': 2, 'category': 'Hidden', 'neurons': 3, 'activation_function': act_sigmoid},
-			{'layer_num': 3, 'category': 'Hidden', 'neurons': 3, 'activation_function': act_sigmoid},
-			{'layer_num': 4, 'category': 'Output', 'neurons': 5, 'activation_function': act_sigmoid}
+			{'layer_num': 1, 'category': 'Input', 'neurons': 784, 'activation_function': act_straight},
+			{'layer_num': 2, 'category': 'Hidden', 'neurons': 25, 'activation_function': act_ReLU},
+			{'layer_num': 3, 'category': 'Hidden', 'neurons': 25, 'activation_function': act_ReLU},
+			{'layer_num': 4, 'category': 'Hidden', 'neurons': 25, 'activation_function': act_ReLU},
+			{'layer_num': 5, 'category': 'Output', 'neurons': 10, 'activation_function': act_sigmoid}
 			])
 
+data = dp.proc_data('Data/MNISTData/mnist_train.csv', 'Data/MNISTData/mnist_test.csv', 10)
 
-n.train([[[0.1, 0.1, 0.2, 0.3, 0.4], [0.1, 0.1, 0.1, 0.1, 0.1 ]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]],
-	[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
-	[[[0.1, 0.1, 0.1, 0.1, 0.1], [0.1, 0.1, 0.1, 0.1, 0.1]]],
-	0.1, 10)
+print("Data loaded")
+
+
+n.train(data[0][:40000], data[1][:1], 0.25, 5)
+
+score = 0
+
+for image in data[1]:
+
+	correct = max(enumerate(image[1]), key=operator.itemgetter(1))
+	query = max(enumerate(n.forward(image[0])), key=operator.itemgetter(1))
+
+	#print(correct[0], query[0])
+
+	if correct[0] == query[0]:
+		#print("success")
+		score += 1
+	else:
+		#print("fail")
+		continue
+
+print(score)
+print(score / len(data[1]))

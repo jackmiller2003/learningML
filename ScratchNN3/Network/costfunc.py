@@ -31,3 +31,5 @@ def cost_MSE(predictions, targets):
 def cost_dMSE(predictions, targets):
 
     return (2*(np.subtract(targets, predictions)))
+
+print("yes")
